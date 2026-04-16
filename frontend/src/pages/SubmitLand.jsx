@@ -6,29 +6,28 @@ import GlassInput from '../components/ui/GlassInput';
 import GlassButton from '../components/ui/GlassButton';
 import { landApi } from '../api/land';
 
-const RegisterLand = () => {
+const SubmitLand = () => {
     const [formData, setFormData] = useState({
-        landId: '',
-        ownerName: '',
         location: '',
         area: '',
-        documentHash: ''
+        documentHash: '',
+        citizenId: ''
     });
 
-    const registerMutation = useMutation({
-        mutationFn: landApi.registerLand,
+    const submitMutation = useMutation({
+        mutationFn: landApi.submitLandRequest,
         onSuccess: (data) => {
             toast.success(
                 <div className="flex flex-col">
-                    <span className="font-bold">Transaction Synced</span>
-                    <span className="text-xs opacity-90">Asset #{formData.landId} registered.</span>
+                    <span className="font-bold">Request Submitted</span>
+                    <span className="text-xs opacity-90">Your land request is pending approval.</span>
                 </div>,
                 { style: { background: '#1e293b', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }
             );
-            setFormData({ landId: '', ownerName: '', location: '', area: '', documentHash: '' });
+            setFormData({ location: '', area: '', documentHash: '', citizenId: '' });
         },
         onError: (error) => {
-            toast.error('Consensus failed. Valid data required.', {
+            toast.error('Submission failed. Please check your data.', {
                 style: { background: '#450a0a', color: '#fca5a5', border: '1px solid rgba(248,113,113,0.2)' }
             });
         }
@@ -40,20 +39,20 @@ const RegisterLand = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.landId || !formData.ownerName) {
-            toast.error('Identity and Asset ID required.');
+        if (!formData.location || !formData.citizenId) {
+            toast.error('Location and Citizen ID are required.');
             return;
         }
         const payload = {
             ...formData,
             area: formData.area ? parseFloat(formData.area) : undefined
         };
-        const promise = registerMutation.mutateAsync(payload);
+        const promise = submitMutation.mutateAsync(payload);
 
         toast.promise(promise, {
-            loading: 'Propagating to Network...',
-            success: 'Confirmed on Ledger Layer 1',
-            error: (err) => err?.response?.data?.message || err.message || 'Minting failed'
+            loading: 'Submitting request...',
+            success: 'Request submitted successfully!',
+            error: (err) => err?.response?.data?.message || err.message || 'Submission failed'
         }, {
             style: { background: '#0f172a', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.1)' }
         });
@@ -62,43 +61,35 @@ const RegisterLand = () => {
     return (
         <div className="max-w-2xl mx-auto">
             <div className="mb-8">
-                <h1 className="font-display text-4xl font-bold text-slate-100 mb-2 drop-shadow-md">Register Land Asset</h1>
-                <p className="text-slate-400 tracking-wide text-sm">Enter cryptographic property details for node verification.</p>
+                <h1 className="font-display text-4xl font-bold text-slate-100 mb-2 drop-shadow-md">Submit Land Request</h1>
+                <p className="text-slate-400 tracking-wide text-sm">Enter property details for registrar approval.</p>
             </div>
 
             <GlassCard>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                         <GlassInput
-                            id="landId"
-                            label="Asset ID Hash *"
-                            placeholder="e.g. LND-2026-001"
-                            value={formData.landId}
+                            id="citizenId"
+                            label="Citizen ID *"
+                            placeholder="e.g. CID-12345"
+                            value={formData.citizenId}
                             onChange={handleChange}
                             required
                         />
                         <GlassInput
-                            id="ownerName"
-                            label="Initial Owner Identity *"
-                            placeholder="Verified Name"
-                            value={formData.ownerName}
+                            id="location"
+                            label="Location *"
+                            placeholder="Coordinates / Street"
+                            value={formData.location}
                             onChange={handleChange}
                             required
                         />
                     </div>
 
-                    <GlassInput
-                        id="location"
-                        label="Location Matrix Data"
-                        placeholder="Coordinates / Street"
-                        value={formData.location}
-                        onChange={handleChange}
-                    />
-
                     <div className="grid grid-cols-2 gap-6">
                         <GlassInput
                             id="area"
-                            label="Area Map (sq meters)"
+                            label="Area (sq meters)"
                             type="number"
                             placeholder="e.g. 500"
                             value={formData.area}
@@ -106,7 +97,7 @@ const RegisterLand = () => {
                         />
                         <GlassInput
                             id="documentHash"
-                            label="Storage IPFS URI"
+                            label="Document IPFS Hash"
                             placeholder="Qm... or bafy..."
                             value={formData.documentHash}
                             onChange={handleChange}
@@ -114,8 +105,8 @@ const RegisterLand = () => {
                     </div>
 
                     <div className="pt-8 mt-4 border-t border-white/10 flex justify-end">
-                        <GlassButton type="submit" disabled={registerMutation.isPending} className="w-full sm:w-auto px-10 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border-blue-400/20 font-bold tracking-widest uppercase text-xs rounded-xl py-3">
-                            {registerMutation.isPending ? 'Processing...' : 'Mint on Ledger'}
+                        <GlassButton type="submit" disabled={submitMutation.isPending} className="w-full sm:w-auto px-10 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border-blue-400/20 font-bold tracking-widest uppercase text-xs rounded-xl py-3">
+                            {submitMutation.isPending ? 'Processing...' : 'Submit Request'}
                         </GlassButton>
                     </div>
                 </form>
@@ -124,4 +115,4 @@ const RegisterLand = () => {
     );
 };
 
-export default RegisterLand;
+export default SubmitLand;

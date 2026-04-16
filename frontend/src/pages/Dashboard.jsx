@@ -1,39 +1,90 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/ui/GlassCard';
-import { Activity, Database, FileText, ArrowRight } from 'lucide-react';
+import { Activity, Database, FileText, ArrowRight, CheckCircle } from 'lucide-react';
+import { landApi } from '../api/land';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-    // Mock data for initial UI
-    const stats = [
-        { title: 'Total Land Records', value: '14,204', icon: Database, color: 'text-blue-500' },
-        { title: 'Recent Transactions', value: '342', icon: Activity, color: 'text-emerald-500' },
-        { title: 'Pending Approvals', value: '12', icon: FileText, color: 'text-amber-500' },
-    ];
+    const [user] = useState(() => {
+        try {
+            const saved = localStorage.getItem('user');
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
+    });
 
-    const recentTransactions = [
-        { id: 'TX-9923', type: 'Transfer', from: '0x12..34', to: '0x99..AB', time: '10 mins ago', status: 'Success' },
-        { id: 'TX-9922', type: 'Registration', from: 'System', to: '0x44..21', time: '1 hour ago', status: 'Success' },
-        { id: 'TX-9921', type: 'Transfer', from: '0x77..89', to: '0x22..11', time: '3 hours ago', status: 'Pending' },
+    const isRegistrar = user?.role === 'REGISTRAR';
+
+    const [lands, setLands] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchLands = async () => {
+        setLoading(true);
+        try {
+            const data = isRegistrar ? await landApi.getPendingRequests() : await landApi.getMyRequests();
+            setLands(data);
+        } catch (error) {
+            console.error("Fetch lands error", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchLands();
+        }
+    }, []);
+
+    const handleApprove = async (id) => {
+        const toastId = toast.loading('Executing smart contract...', {
+            style: { background: '#1e293b', color: '#fff' }
+        });
+        try {
+            await landApi.approveLandRequest(id);
+            toast.success('Request approved', { id: toastId });
+            fetchLands();
+        } catch (error) {
+            toast.error('Approval failed', { id: toastId });
+        }
+    };
+
+    const handleReject = async (id) => {
+        const toastId = toast.loading('Rejecting request...', {
+            style: { background: '#1e293b', color: '#fff' }
+        });
+        try {
+            await landApi.rejectLandRequest(id);
+            toast.success('Request rejected', { id: toastId });
+            fetchLands();
+        } catch (error) {
+            toast.error('Rejection failed', { id: toastId });
+        }
+    };
+
+    const stats = [
+        { title: isRegistrar ? 'Total Records Indexed' : 'My Vault Properties', value: lands.length, icon: Database, color: 'text-blue-400' },
+        { title: 'Pending Verifications', value: lands.filter(l => l.status === 'PENDING').length, icon: FileText, color: 'text-amber-400' },
+        { title: 'On-Chain Assets', value: lands.filter(l => l.status === 'APPROVED').length, icon: CheckCircle, color: 'text-emerald-400' },
     ];
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-end mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800 mb-2">Dashboard Overview</h1>
-                    <p className="text-slate-500">Welcome to the TerraLedger Land Registry Portal.</p>
+                    <h1 className="font-display text-3xl font-bold text-slate-100 mb-2 drop-shadow-sm">System Command Center</h1>
+                    <p className="text-slate-400 tracking-wide">Node synchronized. Welcome to TerraLedger.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {stats.map((stat, i) => (
-                    <GlassCard key={i} className="flex items-center gap-4">
-                        <div className={`p-4 rounded-2xl bg-white/50 backdrop-blur-sm shadow-inner ${stat.color}`}>
-                            <stat.icon className="w-8 h-8" />
+                    <GlassCard key={i} className="flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
+                        <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 shadow-inner ${stat.color}`}>
+                            <stat.icon className="w-8 h-8 opacity-90" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-                            <h3 className="text-3xl font-bold text-slate-800">{stat.value}</h3>
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{stat.title}</p>
+                            <h3 className="font-display text-4xl font-bold text-slate-100">{stat.value}</h3>
                         </div>
                     </GlassCard>
                 ))}
@@ -43,44 +94,77 @@ const Dashboard = () => {
                 <div className="lg:col-span-2">
                     <GlassCard className="h-full">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-semibold text-slate-800">Recent Transactions</h2>
-                            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                                View All <ArrowRight className="w-4 h-4" />
+                            <h2 className="font-display text-xl font-bold text-slate-100">
+                                {isRegistrar ? 'Global Registry Data' : 'My Encrypted Vault'}
+                            </h2>
+                            <button onClick={fetchLands} className="text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
+                                Sync Output <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-slate-200/50 text-sm font-medium text-slate-500">
-                                        <th className="pb-3 pl-2">Transaction ID</th>
-                                        <th className="pb-3">Type</th>
-                                        <th className="pb-3">From → To</th>
-                                        <th className="pb-3">Time</th>
-                                        <th className="pb-3 text-right pr-2">Status</th>
+                                    <tr className="border-b border-white/10 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                                        <th className="pb-4 pl-2">Location</th>
+                                        <th className="pb-4">Area</th>
+                                        <th className="pb-4">State</th>
+                                        <th className="pb-4">Transaction Hash</th>
+                                        {isRegistrar && <th className="pb-4 text-right pr-2">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="text-sm">
-                                    {recentTransactions.map((tx, i) => (
-                                        <tr key={i} className="border-b border-slate-100/50 hover:bg-white/20 transition-colors">
-                                            <td className="py-4 pl-2 font-mono text-slate-600">{tx.id}</td>
-                                            <td className="py-4">
-                                                <span className={`px-2 py-1 rounded-md text-xs font-medium ${tx.type === 'Transfer' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {tx.type}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 font-mono text-xs text-slate-500">
-                                                {tx.from} <ArrowRight className="w-3 h-3 inline mx-1" /> {tx.to}
-                                            </td>
-                                            <td className="py-4 text-slate-500">{tx.time}</td>
-                                            <td className="py-4 text-right pr-2">
-                                                <span className={`flex items-center justify-end gap-1.5 ${tx.status === 'Success' ? 'text-emerald-600' : 'text-amber-500'}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${tx.status === 'Success' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                                    {tx.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {loading ? (
+                                        <tr><td colSpan="5" className="py-12 text-center text-slate-500 font-mono animate-pulse">Establishing connection...</td></tr>
+                                    ) : lands.length === 0 ? (
+                                        <tr><td colSpan="5" className="py-12 text-center text-slate-500 font-mono">0x00 Null Data Segment</td></tr>
+                                    ) : (
+                                        lands.map((land) => (
+                                            <tr key={land.id} className="border-b border-white/5 table-row-glass text-slate-300">
+                                                <td className="py-4 pl-2 font-mono text-blue-300 font-medium">{land.location}</td>
+                                                <td className="py-4 font-medium">{land.area} sq m</td>
+                                                <td className="py-4">
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border ${
+                                                        land.status === 'APPROVED' 
+                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                                            : land.status === 'REJECTED'
+                                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                    }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor] ${
+                                                            land.status === 'APPROVED' ? 'bg-emerald-400' : land.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-400'
+                                                        }`}></span>
+                                                        {land.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 font-mono text-[10px] text-slate-400 break-all max-w-[150px]">
+                                                    {land.transactionHash || '-'}
+                                                </td>
+                                                {isRegistrar && (
+                                                    <td className="py-4 text-right pr-2 space-x-2">
+                                                        {land.status === 'PENDING' ? (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleApprove(land.id)}
+                                                                    className="glass-button px-4 py-1.5 rounded-lg text-xs font-bold text-white tracking-wide border border-emerald-500/50 bg-emerald-500/20 hover:bg-emerald-500/40"
+                                                                >
+                                                                    Approve
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleReject(land.id)}
+                                                                    className="glass-button px-4 py-1.5 rounded-lg text-xs font-bold text-white tracking-wide border border-red-500/50 bg-red-500/20 hover:bg-red-500/40"
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 bg-white/5 px-3 py-1 rounded-lg border border-white/5">{land.status}</span>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -89,27 +173,30 @@ const Dashboard = () => {
 
                 {/* Blockchain Activity Panel */}
                 <div>
-                    <GlassCard className="h-full bg-gradient-to-br from-white/60 to-blue-50/30">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-blue-500" />
-                            Network Activity
+                    <GlassCard className="h-full relative overflow-hidden group">
+                        {/* Decorative glow */}
+                        <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-blue-500/10 rounded-full blur-[60px] pointer-events-none group-hover:bg-blue-400/20 transition-all duration-700" />
+                        
+                        <h2 className="font-display text-xl font-bold text-slate-100 mb-6 flex items-center gap-3 relative z-10">
+                            <Activity className="w-5 h-5 text-blue-400" />
+                            Live Telemetry
                         </h2>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 relative z-10">
                             {[1, 2, 3, 4].map((block) => (
-                                <div key={block} className="p-3 rounded-xl bg-white/40 border border-white/50 shadow-sm flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                <div key={block} className="p-4 rounded-xl bg-slate-900/40 border border-white/5 shadow-inner flex items-center justify-between backdrop-blur-md hover:bg-slate-800/60 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/20 text-blue-300 flex items-center justify-center font-mono font-bold text-xs shadow-inner">
                                             Bk
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-slate-700">Block #{892400 + block}</p>
-                                            <p className="text-xs text-slate-500">{block * 12}s ago</p>
+                                            <p className="font-display text-sm font-bold text-slate-200">Sector #{892400 + block}</p>
+                                            <p className="text-xs font-mono text-slate-500">{block * 12}s ago</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs font-mono text-slate-400">0x8f...3a</p>
-                                        <p className="text-xs text-emerald-600 font-medium">{Math.floor(Math.random() * 5) + 1} txns</p>
+                                        <p className="text-[10px] font-mono text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded border border-white/5 mb-1">0x8f...3a</p>
+                                        <p className="text-xs text-emerald-400 font-bold tracking-wide">{Math.floor(Math.random() * 5) + 1} TXNS</p>
                                     </div>
                                 </div>
                             ))}
