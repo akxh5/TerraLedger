@@ -12,14 +12,16 @@ const TransferOwnership = () => {
     const [initiateData, setInitiateData] = useState({ landId: '', newOwnerName: '', newOwnerAddress: '' });
     const [approveData, setApproveData] = useState({ transferId: '', privateKey: '' });
 
+    const toastStyle = { style: { background: '#0f172a', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.1)' } };
+
     const initiateMutation = useMutation({
         mutationFn: landApi.initiateTransfer,
         onSuccess: () => {
             toast.success(
                 <div className="flex flex-col">
-                    <span className="font-bold">Transfer Initiated</span>
-                    <span className="text-xs opacity-90">Waiting for receiver approval.</span>
-                </div>
+                    <span className="font-bold">Transaction Initiated</span>
+                    <span className="text-xs opacity-90">Waiting for counterparty consensus.</span>
+                </div>, toastStyle
             );
             setInitiateData({ landId: '', newOwnerName: '', newOwnerAddress: '' });
         }
@@ -30,9 +32,9 @@ const TransferOwnership = () => {
         onSuccess: () => {
             toast.success(
                 <div className="flex flex-col">
-                    <span className="font-bold">Transfer Approved</span>
-                    <span className="text-xs opacity-90">Ownership updated on ledger.</span>
-                </div>
+                    <span className="font-bold">Consensus Reached</span>
+                    <span className="text-xs opacity-90">Ownership matrix updated on ledger.</span>
+                </div>, toastStyle
             );
             setApproveData({ transferId: '', privateKey: '' });
         }
@@ -41,93 +43,91 @@ const TransferOwnership = () => {
     const handleInitiate = (e) => {
         e.preventDefault();
         if (!initiateData.landId || !initiateData.newOwnerAddress) {
-            toast.error('Land ID and New Owner Address are required.');
+            toast.error('Asset ID and Target Address Required.', toastStyle);
             return;
         }
         const promise = initiateMutation.mutateAsync(initiateData);
-
         toast.promise(promise, {
-            loading: 'Initiating transfer...',
-            success: 'Transfer Sent',
+            loading: 'Propagating transfer request...',
+            success: 'Transfer Sent to Mempool',
             error: (err) => err?.response?.data?.message || err.message || 'Failed to initiate transfer'
-        });
+        }, toastStyle);
     };
 
     const handleApprove = (e) => {
         e.preventDefault();
         if (!approveData.transferId || !approveData.privateKey) {
-            toast.error('Transfer ID and Signing Key are required.');
+            toast.error('TX ID and Cryptographic Key needed.', toastStyle);
             return;
         }
         const promise = approveMutation.mutateAsync(approveData);
-
         toast.promise(promise, {
-            loading: 'Signing transfer...',
-            success: 'Ownership Transferred',
-            error: (err) => err?.response?.data?.message || err.message || 'Failed to approve transfer'
-        });
+            loading: 'Executing consensus...',
+            success: 'Asset Transferred Successfully',
+            error: (err) => err?.response?.data?.message || err.message || 'Signature failed'
+        }, toastStyle);
     };
 
     return (
         <div className="max-w-2xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">Transfer Ownership</h1>
-                <p className="text-slate-500">Initiate or securely approve land transfers via the blockchain.</p>
+                <h1 className="font-display text-4xl font-bold text-slate-100 mb-2 drop-shadow-md">Transfer Asset Ownership</h1>
+                <p className="text-slate-400 tracking-wide text-sm">Initiate and execute secure asset transfers cryptographically.</p>
             </div>
 
-            <div className="mb-6 flex p-1 bg-white/20 backdrop-blur-md rounded-xl border border-white/40 w-max shadow-sm">
+            <div className="mb-8 flex p-1 bg-slate-900/60 backdrop-blur-md rounded-xl border border-white/5 w-max shadow-inner">
                 <button
                     onClick={() => setActiveTab('initiate')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'initiate'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-800'
+                    className={`px-6 py-3 rounded-lg text-xs tracking-widest font-bold uppercase transition-all ${activeTab === 'initiate'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-400/20 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                         }`}
                 >
                     Initiate Transfer
                 </button>
                 <button
                     onClick={() => setActiveTab('approve')}
-                    className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'approve'
-                        ? 'bg-white text-emerald-600 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-800'
+                    className={`px-6 py-3 rounded-lg text-xs tracking-widest font-bold uppercase transition-all ${activeTab === 'approve'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/20 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                         }`}
                 >
-                    Approve Transfer
+                    Confirm Consensus
                 </button>
             </div>
 
             {activeTab === 'initiate' && (
-                <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <GlassCard className="border-t-4 border-t-blue-400">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                            <ArrowRightLeft className="w-5 h-5 text-blue-500" />
-                            Transfer Details
+                <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                    <GlassCard className="border-t-[3px] border-t-blue-500/50">
+                        <h2 className="font-display text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
+                            <ArrowRightLeft className="w-5 h-5 text-blue-400" />
+                            Transfer Payload Data
                         </h2>
-                        <form onSubmit={handleInitiate} className="space-y-5">
+                        <form onSubmit={handleInitiate} className="space-y-6">
                             <GlassInput
                                 id="landId"
-                                label="Land ID"
+                                label="Asset ID"
                                 placeholder="e.g. LND-2026-001"
                                 value={initiateData.landId}
                                 onChange={(e) => setInitiateData({ ...initiateData, landId: e.target.value })}
                             />
                             <GlassInput
                                 id="newOwnerName"
-                                label="New Owner Name"
-                                placeholder="Receiver's full name"
+                                label="Target Owner Alias"
+                                placeholder="Receiver's authorized name"
                                 value={initiateData.newOwnerName}
                                 onChange={(e) => setInitiateData({ ...initiateData, newOwnerName: e.target.value })}
                             />
                             <GlassInput
                                 id="newOwnerAddress"
-                                label="New Owner Wallet Address"
+                                label="Target Wallet Hex"
                                 placeholder="0x..."
                                 value={initiateData.newOwnerAddress}
                                 onChange={(e) => setInitiateData({ ...initiateData, newOwnerAddress: e.target.value })}
                             />
-                            <div className="pt-6 border-t border-slate-200/50 flex justify-end">
-                                <GlassButton type="submit" disabled={initiateMutation.isPending} className="bg-blue-600/10 text-blue-700 hover:bg-blue-600/20 border-blue-200">
-                                    {initiateMutation.isPending ? 'Processing...' : 'Initiate on Ledger'}
+                            <div className="pt-8 border-t border-white/10 flex justify-end">
+                                <GlassButton type="submit" disabled={initiateMutation.isPending} className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border-blue-400/20 font-bold uppercase text-xs tracking-widest py-3 px-8 rounded-xl shadow-sm">
+                                    {initiateMutation.isPending ? 'Propagating...' : 'Broadcast Intent'}
                                 </GlassButton>
                             </div>
                         </form>
@@ -136,16 +136,16 @@ const TransferOwnership = () => {
             )}
 
             {activeTab === 'approve' && (
-                <div className="animate-in fade-in slide-in-from-left-4 duration-300">
-                    <GlassCard className="border-t-4 border-t-emerald-400">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                            Verify & Approve
+                <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                    <GlassCard className="border-t-[3px] border-t-emerald-500/50">
+                        <h2 className="font-display text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            Cryptographic Signature
                         </h2>
-                        <form onSubmit={handleApprove} className="space-y-5">
+                        <form onSubmit={handleApprove} className="space-y-6">
                             <GlassInput
                                 id="transferId"
-                                label="Transfer ID"
+                                label="Transaction Intent Hash"
                                 placeholder="e.g. TX-9923"
                                 value={approveData.transferId}
                                 onChange={(e) => setApproveData({ ...approveData, transferId: e.target.value })}
@@ -153,14 +153,14 @@ const TransferOwnership = () => {
                             <GlassInput
                                 id="privateKey"
                                 type="password"
-                                label="Signing Key (Development Only)"
-                                placeholder="Enter private key to sign"
+                                label="Private Signing Key [Demo]"
+                                placeholder="0x..."
                                 value={approveData.privateKey}
                                 onChange={(e) => setApproveData({ ...approveData, privateKey: e.target.value })}
                             />
-                            <div className="pt-6 border-t border-slate-200/50 flex justify-end">
-                                <GlassButton type="submit" disabled={approveMutation.isPending} className="bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 border-emerald-200/50">
-                                    {approveMutation.isPending ? 'Signing...' : 'Approve Transfer'}
+                            <div className="pt-8 border-t border-white/10 flex justify-end">
+                                <GlassButton type="submit" disabled={approveMutation.isPending} className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border-emerald-400/20 font-bold uppercase text-xs tracking-widest py-3 px-8 rounded-xl shadow-sm">
+                                    {approveMutation.isPending ? 'Executing...' : 'Sign & Complete'}
                                 </GlassButton>
                             </div>
                         </form>

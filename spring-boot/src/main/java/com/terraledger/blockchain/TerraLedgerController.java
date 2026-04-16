@@ -1,38 +1,123 @@
 package com.terraledger.blockchain;
 
 import com.terraledger.blockchain.TerraLedgerService.LandRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.math.BigInteger;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping("/land")
+@RequestMapping("/api/lands")
 public class TerraLedgerController {
 
     private final TerraLedgerService terraLedgerService;
+    
+    @Autowired
+    private LandRepository landRepository;
+
+    @Autowired
+    private LandRequestRepository landRequestRepository;
 
     public TerraLedgerController(TerraLedgerService terraLedgerService) {
         this.terraLedgerService = terraLedgerService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<String> registerLand(@RequestBody RegisterLandRequest request) {
+    @PostMapping("/request")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<String> requestLand(@RequestBody LandRequestEntity request) {
         try {
-            TransactionReceipt receipt = terraLedgerService.registerLand(
-                request.getLandId(),
-                request.getOwnerName(),
-                request.getLocation(),
-                BigInteger.valueOf(request.getArea()),
-                request.getDocumentHash()
-            ).send();
-            return ResponseEntity.ok("Land registered successfully. Transaction hash: " + receipt.getTransactionHash());
+            String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+            
+            request.setOwnerAddress(currentUser);
+            request.setStatus("PENDING");
+            request.setCreatedAt(LocalDateTime.now());
+            
+            landRequestRepository.save(request);
+            
+            return ResponseEntity.ok("Land registration request submitted successfully.");
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error registering land: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Error submitting land request: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/my-requests")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<List<LandRequestEntity>> getMyRequests() {
+        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(landRequestRepository.findByOwnerAddress(currentUser));
+    }
+
+    @GetMapping("/my-properties")
+    public ResponseEntity<List<LandEntity>> getMyProperties() {
+        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<LandEntity> lands = landRepository.findByWalletAddress(currentUser);
+        return ResponseEntity.ok(lands);
+    }
+    
+    @GetMapping("/all")
+    public ResponseEntity<List<LandEntity>> getAllLands() {
+        return ResponseEntity.ok(landRepository.findAll());
+    }
+
+    @GetMapping("/requests")
+    @PreAuthorize("hasRole('REGISTRAR')")
+    public ResponseEntity<List<LandRequestEntity>> getPendingRequests() {
+        return ResponseEntity.ok(landRequestRepository.findByStatus("PENDING"));
+    }
+
+    @PostMapping("/approve/{id}")
+    @PreAuthorize("hasRole('REGISTRAR')")
+    public ResponseEntity<String> approveRequest(@PathVariable UUID id) {
+        try {
+            LandRequestEntity landRequest = landRequestRepository.findById(id).orElse(null);
+            if (landRequest == null) {
+                return ResponseEntity.notFound().build();
+            }
+            if (!"PENDING".equals(landRequest.getStatus())) {
+                return ResponseEntity.badRequest().body("Request is not PENDING");
+            }
+            
+            // Execute the smart contract call
+            TransactionReceipt receipt = terraLedgerService.registerLand(
+                landRequest.getId().toString(),
+                landRequest.getOwnerAddress(),
+                landRequest.getLocation(),
+                BigInteger.valueOf(landRequest.getArea()),
+                landRequest.getDocumentHash()
+            ).send();
+            
+            landRequest.setStatus("APPROVED");
+            landRequest.setTransactionHash(receipt.getTransactionHash());
+            landRequest.setApprovedAt(LocalDateTime.now());
+            landRequestRepository.save(landRequest);
+            
+            return ResponseEntity.ok("Land approved and registered on blockchain. Transaction hash: " + receipt.getTransactionHash());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error approving land: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/reject/{id}")
+    @PreAuthorize("hasRole('REGISTRAR')")
+    public ResponseEntity<String> rejectRequest(@PathVariable UUID id) {
+        LandRequestEntity landRequest = landRequestRepository.findById(id).orElse(null);
+        if (landRequest == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!"PENDING".equals(landRequest.getStatus())) {
+            return ResponseEntity.badRequest().body("Request is not PENDING");
+        }
+        
+        landRequest.setStatus("REJECTED");
+        landRequestRepository.save(landRequest);
+        return ResponseEntity.ok("Request rejected.");
     }
 
     @GetMapping("/{id}")
