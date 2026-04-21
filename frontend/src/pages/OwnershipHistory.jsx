@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import GlassCard from '../components/ui/GlassCard';
 import Timeline from '../components/ui/Timeline';
@@ -8,8 +9,12 @@ import { Search, History } from 'lucide-react';
 import { landApi } from '../api/land';
 
 const OwnershipHistory = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeSearch, setActiveSearch] = useState('');
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialId = queryParams.get('id') || '';
+
+    const [searchTerm, setSearchTerm] = useState(initialId);
+    const [activeSearch, setActiveSearch] = useState(initialId);
 
     const { data: history, isLoading, isError } = useQuery({
         queryKey: ['history', activeSearch],
@@ -24,8 +29,6 @@ const OwnershipHistory = () => {
             setActiveSearch(searchTerm.trim());
         }
     };
-
-    const displayHistory = history;
 
     useEffect(() => {
         if (isError) {
@@ -63,17 +66,21 @@ const OwnershipHistory = () => {
                 </div>
             )}
 
-            {displayHistory && !isLoading && (
+            {history && !isLoading && (
                 <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
                     <GlassCard className="p-10 border-t-4 border-t-indigo-500/50 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
 
                         <h2 className="font-display text-2xl font-bold text-white mb-10 flex items-center gap-3 drop-shadow-sm">
                             <History className="w-6 h-6 text-indigo-400" />
-                            Provenance Matrix: {activeSearch || 'LND-2026-001'}
+                            Provenance Matrix: {activeSearch}
                         </h2>
 
-                        <Timeline events={displayHistory} />
+                        {history.length > 0 ? (
+                            <Timeline events={history} />
+                        ) : (
+                            <p className="text-center text-slate-500 font-mono">No history found for this asset.</p>
+                        )}
                     </GlassCard>
                 </div>
             )}

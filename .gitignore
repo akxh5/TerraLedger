@@ -1,9 +1,38 @@
-node_modules
-dist
-build
-.env
+# OS
 .DS_Store
-target
+
+# ENV
+.env
+.env.*
+
+# Logs
 *.log
-coverage
-.vite
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+
+# Java / Spring
+target/
+*.class
+
+# Binaries / Downloads
+*.tar.gz
+*.zip
+node-v*
+apache-maven*
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Blockchain / Hardhat
+artifacts/
+cache/
+typechain/

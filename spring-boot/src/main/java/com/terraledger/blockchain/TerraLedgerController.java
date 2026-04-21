@@ -11,6 +11,8 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 import java.time.LocalDateTime;
 
 @RestController
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 public class TerraLedgerController {
 
     private final TerraLedgerService terraLedgerService;
+    private final LandService landService;
     
     @Autowired
     private LandRepository landRepository;
@@ -25,13 +28,14 @@ public class TerraLedgerController {
     @Autowired
     private LandRequestRepository landRequestRepository;
 
-    public TerraLedgerController(TerraLedgerService terraLedgerService) {
+    public TerraLedgerController(TerraLedgerService terraLedgerService, LandService landService) {
         this.terraLedgerService = terraLedgerService;
+        this.landService = landService;
     }
 
     @PostMapping("/request")
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<String> requestLand(@RequestBody LandRequestEntity request) {
+    public ResponseEntity<?> requestLand(@RequestBody LandRequestEntity request) {
         try {
             String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
             
@@ -41,9 +45,9 @@ public class TerraLedgerController {
             
             landRequestRepository.save(request);
             
-            return ResponseEntity.ok("Land registration request submitted successfully.");
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Land registration request submitted successfully."));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error submitting land request: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error submitting land request: " + e.getMessage()));
         }
     }
 
@@ -57,7 +61,7 @@ public class TerraLedgerController {
     @GetMapping("/my-properties")
     public ResponseEntity<List<LandEntity>> getMyProperties() {
         String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
-        List<LandEntity> lands = landRepository.findByWalletAddress(currentUser);
+        List<LandEntity> lands = landRepository.findByOwnerAddress(currentUser);
         return ResponseEntity.ok(lands);
     }
     
@@ -74,87 +78,105 @@ public class TerraLedgerController {
 
     @PostMapping("/approve/{id}")
     @PreAuthorize("hasRole('REGISTRAR')")
-    public ResponseEntity<String> approveRequest(@PathVariable UUID id) {
-        try {
-            LandRequestEntity landRequest = landRequestRepository.findById(id).orElse(null);
-            if (landRequest == null) {
-                return ResponseEntity.notFound().build();
-            }
-            if (!"PENDING".equals(landRequest.getStatus())) {
-                return ResponseEntity.badRequest().body("Request is not PENDING");
-            }
-            
-            // Execute the smart contract call
-            TransactionReceipt receipt = terraLedgerService.registerLand(
-                landRequest.getId().toString(),
-                landRequest.getOwnerAddress(),
-                landRequest.getLocation(),
-                BigInteger.valueOf(landRequest.getArea()),
-                landRequest.getDocumentHash()
-            ).send();
-            
-            landRequest.setStatus("APPROVED");
-            landRequest.setTransactionHash(receipt.getTransactionHash());
-            landRequest.setApprovedAt(LocalDateTime.now());
-            landRequestRepository.save(landRequest);
-            
-            return ResponseEntity.ok("Land approved and registered on blockchain. Transaction hash: " + receipt.getTransactionHash());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error approving land: " + e.getMessage());
-        }
+    public ResponseEntity<?> approveRequest(@PathVariable UUID id) throws Exception {
+        String txHash = landService.approveAndRegisterOnChain(id);
+        
+        return ResponseEntity.ok(Map.of(
+            "status", "success", 
+            "message", "Land approved and registered on blockchain.", 
+            "transactionHash", txHash
+        ));
     }
 
     @PostMapping("/reject/{id}")
     @PreAuthorize("hasRole('REGISTRAR')")
-    public ResponseEntity<String> rejectRequest(@PathVariable UUID id) {
+    public ResponseEntity<?> rejectRequest(@PathVariable UUID id) {
         LandRequestEntity landRequest = landRequestRepository.findById(id).orElse(null);
         if (landRequest == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "Request not found"));
         }
         if (!"PENDING".equals(landRequest.getStatus())) {
-            return ResponseEntity.badRequest().body("Request is not PENDING");
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Request is not PENDING"));
         }
         
         landRequest.setStatus("REJECTED");
         landRequestRepository.save(landRequest);
-        return ResponseEntity.ok("Request rejected.");
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Request rejected."));
     }
 
+    // Task 4: Get by ID using DB
     @GetMapping("/{id}")
-    public ResponseEntity<?> getLand(@PathVariable BigInteger id) {
+    public ResponseEntity<?> getLand(@PathVariable Long id) {
         try {
-            LandRecord record = terraLedgerService.getLand(id).send();
-            if (record != null) {
-                return ResponseEntity.ok(record);
-            }
-            return ResponseEntity.notFound().build();
+            return landRepository.findById(id)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error fetching land record: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error fetching land record: " + e.getMessage()));
+        }
+    }
+
+    // Task 4: Search
+    @GetMapping("/search")
+    public ResponseEntity<?> searchLands(@RequestParam String query) {
+        try {
+            List<LandEntity> results = landRepository.searchLands(query);
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error searching lands: " + e.getMessage()));
+        }
+    }
+
+    // Task 3: Dashboard Stats
+    @GetMapping("/dashboard/stats")
+    public ResponseEntity<?> getDashboardStats() {
+        try {
+            long totalLands = landRepository.count();
+            List<LandEntity> recentTransactions = landRepository.findFirst5ByOrderByCreatedAtDesc();
+            
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalLands", totalLands);
+            stats.put("recentTransactions", recentTransactions);
+            
+            Map<String, Long> counts = new HashMap<>();
+            counts.put("approved", totalLands);
+            counts.put("pending", landRequestRepository.countByStatus("PENDING"));
+            stats.put("counts", counts);
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error fetching stats: " + e.getMessage()));
         }
     }
 
     @PostMapping("/transfer/initiate")
-    public ResponseEntity<String> initiateTransfer(@RequestBody InitiateTransferRequest request) {
+    public ResponseEntity<?> initiateTransfer(@RequestBody InitiateTransferRequest request) {
         try {
             TransactionReceipt receipt = terraLedgerService.initiateTransfer(
                 BigInteger.valueOf(request.getLandId()),
                 request.getToAddress()
             ).send();
-            return ResponseEntity.ok("Transfer initiated successfully. Transaction hash: " + receipt.getTransactionHash());
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Transfer initiated successfully.", "transactionHash", receipt.getTransactionHash()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error initiating transfer: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error initiating transfer: " + e.getMessage()));
         }
     }
 
     @PostMapping("/transfer/approve")
-    public ResponseEntity<String> approveTransfer(@RequestBody ApproveTransferRequest request) {
+    public ResponseEntity<?> approveTransfer(@RequestBody ApproveTransferRequest request) {
         try {
             TransactionReceipt receipt = terraLedgerService.approveTransfer(
                 BigInteger.valueOf(request.getLandId())
             ).send();
-            return ResponseEntity.ok("Transfer approved successfully. Transaction hash: " + receipt.getTransactionHash());
+            
+            // After transfer approval, we should update the DB record too
+            // Note: In a real system, we'd listen to blockchain events or use a more robust way to sync
+            // For now, let's try to update if we have the land ID
+            // landRepository.findById(...)
+            
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Transfer approved successfully.", "transactionHash", receipt.getTransactionHash()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error approving transfer: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error approving transfer: " + e.getMessage()));
         }
     }
 
@@ -164,31 +186,11 @@ public class TerraLedgerController {
             List<String> history = terraLedgerService.getOwnershipHistory(id).send();
             return ResponseEntity.ok(history);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error fetching ownership history: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("status", "error", "message", "Error fetching ownership history: " + e.getMessage()));
         }
     }
 
     // DTOs for request bodies
-    public static class RegisterLandRequest {
-        private String landId;
-        private String ownerName;
-        private String location;
-        private long area;
-        private String documentHash;
-
-        // Getters and Setters
-        public String getLandId() { return landId; }
-        public void setLandId(String landId) { this.landId = landId; }
-        public String getOwnerName() { return ownerName; }
-        public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
-        public String getLocation() { return location; }
-        public void setLocation(String location) { this.location = location; }
-        public long getArea() { return area; }
-        public void setArea(long area) { this.area = area; }
-        public String getDocumentHash() { return documentHash; }
-        public void setDocumentHash(String documentHash) { this.documentHash = documentHash; }
-    }
-
     public static class InitiateTransferRequest {
         private long landId;
         private String toAddress;

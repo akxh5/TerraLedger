@@ -31,16 +31,24 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Service
 public class TerraLedgerService {
 
     private final Web3j web3j;
     private final Credentials credentials;
-    private String contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-    private static final String ABI_FILE_PATH = "smart-contract/artifacts/contracts/TerraLedger.sol/TerraLedger.json";
+
+    @Value("${blockchain.contract.address}")
+    private String contractAddress;
+
+    @Value("${blockchain.abi.path:smart-contract/artifacts/contracts/TerraLedger.sol/TerraLedger.json}")
+    private String abiFilePath;
+
     private final ContractGasProvider gasProvider = new DefaultGasProvider();
     private TransactionManager transactionManager;
+
 
     public TerraLedgerService(Web3j web3j, Credentials credentials) {
         this.web3j = web3j;
@@ -82,7 +90,7 @@ public class TerraLedgerService {
 
     // Helper to get ABI (moved from loadContract)
     private String getAbi() throws IOException {
-        String abiJson = new String(Files.readAllBytes(Paths.get(ABI_FILE_PATH)));
+        String abiJson = new String(Files.readAllBytes(Paths.get(abiFilePath)));
         ObjectMapper mapper = new ObjectMapper();
         JsonNode rootNode = mapper.readTree(abiJson);
         return mapper.writeValueAsString(rootNode.get("abi"));

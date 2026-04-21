@@ -15,15 +15,25 @@ const Dashboard = () => {
     const isRegistrar = user?.role === 'REGISTRAR';
 
     const [lands, setLands] = useState([]);
+    const [stats, setStats] = useState({
+        totalLands: 0,
+        recentTransactions: [],
+        counts: { approved: 0, pending: 0 }
+    });
     const [loading, setLoading] = useState(true);
 
-    const fetchLands = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const data = isRegistrar ? await landApi.getPendingRequests() : await landApi.getMyRequests();
-            setLands(data);
+            // Fetch personal requests/properties
+            const landData = isRegistrar ? await landApi.getPendingRequests() : await landApi.getMyRequests();
+            setLands(landData);
+
+            // Fetch global stats
+            const statsData = await landApi.getStats();
+            setStats(statsData);
         } catch (error) {
-            console.error("Fetch lands error", error);
+            console.error("Fetch data error", error);
         } finally {
             setLoading(false);
         }
@@ -31,7 +41,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         if (user) {
-            fetchLands();
+            fetchData();
         }
     }, []);
 
@@ -42,7 +52,7 @@ const Dashboard = () => {
         try {
             await landApi.approveLandRequest(id);
             toast.success('Request approved', { id: toastId });
-            fetchLands();
+            fetchData();
         } catch (error) {
             toast.error('Approval failed', { id: toastId });
         }
@@ -55,16 +65,16 @@ const Dashboard = () => {
         try {
             await landApi.rejectLandRequest(id);
             toast.success('Request rejected', { id: toastId });
-            fetchLands();
+            fetchData();
         } catch (error) {
             toast.error('Rejection failed', { id: toastId });
         }
     };
 
-    const stats = [
-        { title: isRegistrar ? 'Total Records Indexed' : 'My Vault Properties', value: lands.length, icon: Database, color: 'text-blue-400' },
-        { title: 'Pending Verifications', value: lands.filter(l => l.status === 'PENDING').length, icon: FileText, color: 'text-amber-400' },
-        { title: 'On-Chain Assets', value: lands.filter(l => l.status === 'APPROVED').length, icon: CheckCircle, color: 'text-emerald-400' },
+    const statCards = [
+        { title: 'Approved Assets', value: stats.totalLands, icon: Database, color: 'text-blue-400' },
+        { title: 'Pending Verifications', value: stats.counts.pending, icon: FileText, color: 'text-amber-400' },
+        { title: 'My Active Assets', value: isRegistrar ? stats.totalLands : (lands.filter(l => l.status === 'APPROVED').length || 0), icon: CheckCircle, color: 'text-emerald-400' },
     ];
 
     return (
@@ -72,12 +82,12 @@ const Dashboard = () => {
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h1 className="font-display text-3xl font-bold text-slate-100 mb-2 drop-shadow-sm">System Command Center</h1>
-                    <p className="text-slate-400 tracking-wide">Node synchronized. Welcome to TerraLedger.</p>
+                    <p className="text-slate-400 tracking-wide">Node synchronized. Welcome, {user?.email}.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {stats.map((stat, i) => (
+                {statCards.map((stat, i) => (
                     <GlassCard key={i} className="flex items-center gap-4 transition-transform hover:-translate-y-1 duration-300">
                         <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 shadow-inner ${stat.color}`}>
                             <stat.icon className="w-8 h-8 opacity-90" />
@@ -95,9 +105,9 @@ const Dashboard = () => {
                     <GlassCard className="h-full">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="font-display text-xl font-bold text-slate-100">
-                                {isRegistrar ? 'Global Registry Data' : 'My Encrypted Vault'}
+                                {isRegistrar ? 'Pending Approval Queue' : 'My Land Requests'}
                             </h2>
-                            <button onClick={fetchLands} className="text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
+                            <button onClick={fetchData} className="text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
                                 Sync Output <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -171,7 +181,7 @@ const Dashboard = () => {
                     </GlassCard>
                 </div>
 
-                {/* Blockchain Activity Panel */}
+                {/* Recent Approved Activity Panel */}
                 <div>
                     <GlassCard className="h-full relative overflow-hidden group">
                         {/* Decorative glow */}
@@ -179,27 +189,33 @@ const Dashboard = () => {
                         
                         <h2 className="font-display text-xl font-bold text-slate-100 mb-6 flex items-center gap-3 relative z-10">
                             <Activity className="w-5 h-5 text-blue-400" />
-                            Live Telemetry
+                            Recent Registry
                         </h2>
 
                         <div className="space-y-4 relative z-10">
-                            {[1, 2, 3, 4].map((block) => (
-                                <div key={block} className="p-4 rounded-xl bg-slate-900/40 border border-white/5 shadow-inner flex items-center justify-between backdrop-blur-md hover:bg-slate-800/60 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/20 text-blue-300 flex items-center justify-center font-mono font-bold text-xs shadow-inner">
-                                            Bk
+                            {stats.recentTransactions && stats.recentTransactions.length > 0 ? (
+                                stats.recentTransactions.map((land) => (
+                                    <div key={land.id} className="p-4 rounded-xl bg-slate-900/40 border border-white/5 shadow-inner flex items-center justify-between backdrop-blur-md hover:bg-slate-800/60 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/20 text-blue-300 flex items-center justify-center font-mono font-bold text-xs shadow-inner">
+                                                ID
+                                            </div>
+                                            <div>
+                                                <p className="font-display text-sm font-bold text-slate-200">{land.location}</p>
+                                                <p className="text-xs font-mono text-slate-500">{land.area} sq m</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-display text-sm font-bold text-slate-200">Sector #{892400 + block}</p>
-                                            <p className="text-xs font-mono text-slate-500">{block * 12}s ago</p>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-mono text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded border border-white/5 mb-1">
+                                                {land.transactionHash ? land.transactionHash.substring(0, 6) + '...' + land.transactionHash.substring(land.transactionHash.length - 4) : '-'}
+                                            </p>
+                                            <p className="text-xs text-emerald-400 font-bold tracking-wide">APPROVED</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-mono text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded border border-white/5 mb-1">0x8f...3a</p>
-                                        <p className="text-xs text-emerald-400 font-bold tracking-wide">{Math.floor(Math.random() * 5) + 1} TXNS</p>
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <p className="text-center text-slate-500 font-mono text-sm py-8">No recent activity</p>
+                            )}
                         </div>
                     </GlassCard>
                 </div>

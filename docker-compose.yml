@@ -1,10 +1,67 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
+    container_name: terraledger-db
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: terraledger
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  hardhat:
+    build: ./smart-contract
+    container_name: terraledger-blockchain
+    restart: unless-stopped
+    volumes:
+      - ./smart-contract:/app
+      - /app/node_modules
+    ports:
+      - "8545:8545"
+
+  backend:
+    build: ./spring-boot
+    container_name: terraledger-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./smart-contract:/app/smart-contract
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hardhat:
+        condition: service_started
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/terraledger
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+      - BLOCKCHAIN_RPC_URL=http://hardhat:8545
+      - BLOCKCHAIN_ABI_PATH=/app/smart-contract/artifacts/contracts/TerraLedger.sol/TerraLedger.json
+    # Note: CONTRACT_ADDRESS is now picked up from .env via env_file
+
+  frontend:
+    build: ./frontend
+    container_name: terraledger-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
+
+volumes:
+  postgres_data:

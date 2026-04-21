@@ -16,13 +16,24 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String email = "admin@terraledger.gov";
-        if (userRepository.findByEmail(email).isEmpty()) {
-            User registrar = new User(email, passwordEncoder.encode("admin123"), Role.REGISTRAR);
+        // Seed REGISTRAR
+        String registrarEmail = "admin@terraledger.gov";
+        if (userRepository.findByEmail(registrarEmail).isEmpty()) {
+            User registrar = new User(registrarEmail, passwordEncoder.encode("admin123"), Role.REGISTRAR);
             userRepository.save(registrar);
-            System.out.println("✅ Default REGISTRAR seeded: " + email);
+            System.out.println("✅ Default REGISTRAR seeded: " + registrarEmail);
         } else {
-            System.out.println("ℹ️  REGISTRAR exists: " + email);
+            System.out.println("ℹ️  REGISTRAR exists: " + registrarEmail);
+        }
+
+        // Seed OWNER
+        String ownerEmail = "citizen@test.com";
+        if (userRepository.findByEmail(ownerEmail).isEmpty()) {
+            User owner = new User(ownerEmail, passwordEncoder.encode("password"), Role.OWNER);
+            userRepository.save(owner);
+            System.out.println("✅ Default OWNER seeded: " + ownerEmail);
+        } else {
+            System.out.println("ℹ️  OWNER exists: " + ownerEmail);
         }
     }
 }
