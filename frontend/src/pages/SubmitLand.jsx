@@ -61,8 +61,8 @@ const SubmitLand = () => {
     return (
         <div className="max-w-2xl mx-auto">
             <div className="mb-8">
-                <h1 className="font-display text-4xl font-bold text-slate-100 mb-2 drop-shadow-md">Submit Land Request</h1>
-                <p className="text-slate-400 tracking-wide text-sm">Enter property details for registrar approval.</p>
+                <h1 className="font-display text-4xl font-bold text-slate-100 mb-2 drop-shadow-md">Land Asset Submission</h1>
+                <p className="text-slate-400 tracking-wide text-sm">Provide property metadata for formal registrar verification and blockchain registration.</p>
             </div>
 
             <GlassCard>

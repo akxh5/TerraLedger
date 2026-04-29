@@ -81,8 +81,8 @@ const Dashboard = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-end mb-8">
                 <div>
-                    <h1 className="font-display text-3xl font-bold text-slate-100 mb-2 drop-shadow-sm">System Command Center</h1>
-                    <p className="text-slate-400 tracking-wide">Node synchronized. Welcome, {user?.email}.</p>
+                    <h1 className="font-display text-3xl font-bold text-slate-100 mb-2 drop-shadow-sm">Governance Dashboard</h1>
+                    <p className="text-slate-400 tracking-wide">Secure node connection established. Welcome, {user?.email}.</p>
                 </div>
             </div>
 
