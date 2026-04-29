@@ -1,62 +1,62 @@
 # TerraLedger
 
-**A Blockchain-Based Land Registry with Role-Based Governance**
+**A Blockchain-Integrated Land Registry with Multi-Tiered Governance**
 
-TerraLedger is a decentralized application (dApp) designed to bring transparency, security, and immutability to land registration. By combining a high-performance Spring Boot backend with the Ethereum blockchain, TerraLedger ensures that property records are verifiable and tamper-proof.
+TerraLedger is a sophisticated decentralized architecture engineered to instill transparency, cryptographic security, and absolute immutability within the domain of land registration. By synthesizing a robust Spring Boot backend with the Ethereum blockchain, TerraLedger establishes property records that are empirically verifiable and inherently resilient against unauthorized modification.
 
 ---
 
-## 🏛 System Overview
+## Architectural Paradigm
 
-The system operates on a **Governed Approval Workflow**:
-1.  **Request Initiation**: Users (OWNERS) submit a land registration request with property metadata (location, area, document hash).
-2.  **Registrar Governance**: Authorized REGISTRARS review the pending requests in a secure command center.
-3.  **On-Chain Minting**: Upon approval, the system interacts with the Ethereum node to mint an immutable property record on the blockchain.
-4.  **Immutability**: Once registered, the record is stored permanently on the ledger, with all ownership history cryptographically traceable.
+The ecosystem operates through a rigorous **Governed Validation Workflow**:
+1.  **Submission Phase**: Stakeholders (OWNERS) transmit a land registration payload comprising granular property metadata, including spatial coordinates, dimensional area, and a cryptographic document hash.
+2.  **Governance Review**: Authorized REGISTRARS analyze pending submissions within a centralized, secure administrative interface.
+3.  **On-Chain Finalization**: Upon successful validation, the system orchestrates an interaction with the Ethereum node to mint an immutable digital twin of the property record on the distributed ledger.
+4.  **Persistent Provenance**: Once finalized, the record resides permanently on the blockchain, with all subsequent ownership transitions being cryptographically traceable and immutable.
 
-## 🛠 Tech Stack
+## Technical Composition
 
--   **Frontend**: React (Vite), Tailwind CSS, Framer Motion (Glassmorphism UI), Lucide Icons.
--   **Backend**: Java 17, Spring Boot, Spring Security (JWT), Web3j.
--   **Blockchain**: Solidity 0.8.28, Hardhat (EVM compatible).
--   **Infrastructure**: Docker, Docker Compose, PostgreSQL 15.
+-   **Frontend**: React ecosystem leveraged via Vite, utilizing Tailwind CSS and Framer Motion to deliver a refractive, high-density glassmorphism interface.
+-   **Backend**: Java 17 enterprise framework (Spring Boot), utilizing Spring Security for JWT-based session management and Web3j for blockchain interoperability.
+-   **Blockchain**: Solidity 0.8.28 smart contracts deployed via a Hardhat EVM-compatible environment.
+-   **Infrastructure**: Unified containerization through Docker and Docker Compose, supported by a PostgreSQL 15 relational persistence layer.
 
-## 🚀 Getting Started
+## Implementation Guide
 
-The entire stack is containerized for a seamless demo experience.
+The entire architecture is containerized to ensure consistent deployment and uninterrupted evaluation.
 
 ```bash
 # Clone the repository
 git clone https://github.com/akxh5/TerraLedger.git
 cd TerraLedger
 
-# Start the full stack
+# Orchestrate the full stack
 ./start.sh
 ```
 
-**Access Points:**
-- **Web Interface**: `http://localhost:5173`
-- **REST API**: `http://localhost:8080`
-- **Blockchain Node**: `http://localhost:8545`
+**Network Access Points:**
+- **Interface Layer**: `http://localhost:5173`
+- **Application API**: `http://localhost:8080`
+- **Distributed Ledger RPC**: `http://localhost:8545`
 
-## ✨ Core Features
+## Core Functional Capacities
 
--   **JWT-Based Authentication**: Secure role-based access for Owners and Registrars.
--   **Glassmorphic UI**: A modern, refractive interface designed for clarity and data density.
--   **Blockchain Synchronization**: Real-time updates between the PostgreSQL database and the EVM ledger.
--   **Global Search**: Instant lookup of property records by location, owner, or asset ID.
--   **Transaction Tracking**: Direct visibility into blockchain transaction hashes for every approved record.
+-   **Cryptographic Authentication**: Secure, role-based access control managed via JSON Web Tokens for diverse user tiers.
+-   **Refractive Interface Design**: A contemporary, high-fidelity UI optimized for clarity, structural elegance, and data density.
+-   **Ledger-Database Reciprocity**: Real-time synchronization between the PostgreSQL relational store and the EVM-based distributed ledger.
+-   **Universal Registry Querying**: High-performance lookup of property records indexed by location, owner identity, or unique asset identifiers.
+-   **Transaction Transparency**: Direct exposure of blockchain transaction hashes, providing empirical evidence for every validated record.
 
-## ⚠️ Limitations & Future Scope
+## Constraints and Evolutionary Path
 
-### Current Limitations (Demo Mode)
--   **Transfer Logic**: Ownership transfer is currently simulated on-chain but disabled in the UI to prioritize registration stability.
--   **Storage**: Document hashes are stored as metadata; actual IPFS integration is simulated in this version.
+### Contemporary Constraints (Demonstration Context)
+-   **Transfer Logic**: Ownership transfer mechanisms are functional on-chain but currently suppressed in the UI to maintain absolute registration integrity.
+-   **Persistence**: Document hashes are preserved as metadata; comprehensive IPFS integration is simulated in this current iteration.
 
-### Future Scope
--   **Fractional Ownership**: Splitting property rights into tradable digital tokens.
--   **Automated KYC**: Integration with digital identity providers for instant user verification.
--   **Dispute Resolution**: Governance-based mechanisms for resolving property claims.
+### Evolutionary Trajectory
+-   **Fractionalized Assets**: Tokenization of property rights into granular, liquid digital assets.
+-   **Autonomous Identity Verification**: Integration with sovereign identity protocols for instantaneous stakeholder validation.
+-   **Governance-Led Dispute Resolution**: Consensus-driven mechanisms for the adjudication of property-related claims.
 
 ---
-**TerraLedger**: Moving the world's most valuable asset class onto the ledger.
+**TerraLedger**: Transitioning global real estate into the era of immutable provenance.
