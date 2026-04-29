@@ -8,7 +8,7 @@ const allNavItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['REGISTRAR', 'OWNER'] },
     { name: 'Register Land', path: '/register', icon: FilePlus, roles: ['REGISTRAR'] },
     { name: 'Submit Request', path: '/submit-land', icon: FilePlus, roles: ['OWNER'] },
-    { name: 'Transfer Ownership', path: '/transfer', icon: ArrowRightLeft, roles: ['REGISTRAR', 'OWNER'] },
+    // { name: 'Transfer Ownership', path: '/transfer', icon: ArrowRightLeft, roles: ['REGISTRAR', 'OWNER'] },
     { name: 'Search Record', path: '/search', icon: Search, roles: ['REGISTRAR', 'OWNER'] },
     { name: 'Ownership History', path: '/history', icon: History, roles: ['REGISTRAR', 'OWNER'] },
 ];

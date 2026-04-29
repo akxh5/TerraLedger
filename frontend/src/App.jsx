@@ -51,7 +51,7 @@ function App() {
             <Route path="register" element={<RegisterLand />} />
             <Route path="submit-land" element={<SubmitLand />} />
             <Route path="search" element={<SearchRecord />} />
-            <Route path="transfer" element={<TransferOwnership />} />
+            {/* <Route path="transfer" element={<TransferOwnership />} /> */}
             <Route path="history" element={<OwnershipHistory />} />
           </Route>
         </Routes>
