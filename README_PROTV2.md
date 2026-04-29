@@ -1,52 +1,54 @@
-# TerraLedger PROTV2
+# TerraLedger PROTV2 - Demo Edition
 
-Welcome to TerraLedger PROTV2, the hardened enterprise-ready backend for decentralized land registration.
+Welcome to TerraLedger PROTV2, a stabilized, enterprise-ready full-stack prototype for decentralized land registration.
 
-## System Architecture
+## 🚀 Quick Start (Demo Mode)
 
-The core of TerraLedger relies on combining high-throughput database records with immutable blockchain consensus. The primary validation flow follows these steps:
+The entire system is containerized and orchestrated for a one-click startup.
 
-1. **Owner Initiation**: An authenticated `OWNER` submits a land registration payload including location, area, and document IPFS hash via the REST API.
-2. **Database Staging**: The request is durably stored in PostgreSQL with a `PENDING` status. The system prevents duplicates and ensures data integrity.
-3. **Registrar Review**: An authorized `REGISTRAR` reviews pending requests. 
-4. **Blockchain Consensus**: The registrar approves the request. The backend immediately talks to the Ethereum node to mint an immutable property record using the TerraLedger Smart Contract.
-5. **Database Finalization**: Upon receiving a successful transaction receipt from the blockchain, the database finalizes the request status to `APPROVED`, attaching the exact transaction hash.
-
-## How to Run
-
-### 1. Hardhat Node
-Start the local Ethereum blockchain simulation:
 ```bash
-cd smart-contract
-npx hardhat node
-```
-Open a new terminal and deploy the contract:
-```bash
-npx hardhat run scripts/deploy.ts --network localhost
+./start.sh
 ```
 
-### 2. Backend (Spring Boot)
-Ensure your PostgreSQL `terraledger` database is created and running. Start the backend:
-```bash
-cd spring-boot
-mvn spring-boot:run
-```
+This script will:
+1. Start PostgreSQL and a Hardhat blockchain node.
+2. Deploy the TerraLedger Smart Contract automatically.
+3. Inject the contract address into the backend.
+4. Launch the Spring Boot backend and React frontend.
 
-### 3. Frontend (Vite)
-To serve the React UI:
-```bash
-cd frontend
-npm install
-npm run dev
-```
+**Access Points:**
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:8080
+- **Blockchain RPC:** http://localhost:8545
 
-## Automated Hardening Validation
+## 🎯 Demo Scope (Verified Features)
 
-We provide an automated End-to-End node script that aggressively validates Edge Cases, Idempotency, and Authentication rules, confirming our strict Global Error Handling works as intended.
+This version is optimized for stability. The following flows are verified for the live demo:
 
-To run the validation:
+1.  **Authentication**: Secure login for `REGISTRAR` and `OWNER` roles using JWT.
+2.  **Governed Registration**: 
+    - `OWNER` submits a "Land Request" with metadata.
+    - `REGISTRAR` reviews and "Approves" the request.
+    - Automatic minting of immutable property records on the blockchain.
+3.  **Real-time Dashboard**: Live status tracking of requests and global registry stats.
+4.  **Global Search**: Instant database-backed search across the entire registry.
+
+*Note: Transfer Ownership features are currently disabled in the UI to ensure ledger consistency during the demo.*
+
+## 🛠 Tech Stack
+
+- **Frontend**: React, Tailwind CSS, Lucide Icons, Vite.
+- **Backend**: Java 17, Spring Boot, Web3j, Spring Security (JWT).
+- **Blockchain**: Solidity 0.8.28, Hardhat, Ethers.js.
+- **Database**: PostgreSQL 15.
+- **Orchestration**: Docker, Docker Compose.
+
+## 🧪 Validation
+
+To run the automated E2E validation suite (requires services to be running):
 ```bash
 node e2e-test.js
 ```
 
-You should see all edge case tests pass successfully, confirming that constraints like HTTP 403 (Unauthorized Access), HTTP 404 (Invalid UUID), and HTTP 400 (Duplicate Approvals) yield exactly the expected behaviors.
+---
+**TerraLedger**: Immutable Trust. Transparent Governance.
