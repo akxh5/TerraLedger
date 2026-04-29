@@ -48,7 +48,7 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<Dashboard />} />
-            <Route path="register" element={<RegisterLand />} />
+            {/* <Route path="register" element={<RegisterLand />} /> */}
             <Route path="submit-land" element={<SubmitLand />} />
             <Route path="search" element={<SearchRecord />} />
             {/* <Route path="transfer" element={<TransferOwnership />} /> */}

@@ -33,7 +33,7 @@ const Dashboard = () => {
             const statsData = await landApi.getStats();
             setStats(statsData);
         } catch (error) {
-            console.error("Fetch data error", error);
+            // Silently fail or handled via UI state
         } finally {
             setLoading(false);
         }
